@@ -3,10 +3,12 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 export const apiSlice = createApi({
   reducerPath: "api",
   baseQuery: fetchBaseQuery({
-    baseUrl: "https://api.autogon.ai/api/v1/",
-    prepareHeaders: (headers, api, getState) => {
-      const app = getState()?.app;
-      return headers["X-AUG-KEY"] = app?.apiKey;
+    baseUrl: "https://api.autogon.ai/api/v1/", 
+    prepareHeaders: (headers, api) => {
+      const app = api.getState()?.app;
+
+      headers.append("X-AUG-KEY", app?.apiKey);
+      return headers
     },
   }),
   endpoints: (builder) => ({

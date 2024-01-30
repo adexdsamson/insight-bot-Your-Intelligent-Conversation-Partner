@@ -14,7 +14,8 @@ export const appSlice = createSlice({
     userName: null,
     voiceId: null,
     isExisting: false,
-    onboardingStep: ONBOARD_STEPS.WELCOME
+    onboardingStep: ONBOARD_STEPS.WELCOME,
+    messages: []
   },
   reducers: {
     setApiKey: (state, action) => {
@@ -34,13 +35,19 @@ export const appSlice = createSlice({
     },
     setOnboardingStep: (state, action) => {
       state.onboardingStep = action.payload
+    },
+    setMessage: (state, action) => {
+      state.messages = [ ...state.messages, action.payload]
+    },
+    resetMessages: (state) => {
+      state.messages = []
     }
   }
 });
 
 const { reducer, actions } = appSlice;
 
-export const { setAgentId, setApiKey, setUserName, setVoiceId, setIsExisting, setOnboardingStep } = actions;
+export const { setAgentId, setApiKey, setUserName, setVoiceId, setIsExisting, setOnboardingStep, setMessage, resetMessages } = actions;
 
 export default reducer;
 

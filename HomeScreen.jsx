@@ -1,7 +1,7 @@
-import { Text } from "react-native";
+import { ActivityIndicator, Text } from "react-native";
 import { MotiView } from "@motify/components";
 import { View } from "react-native";
-import { MaterialIcons } from "@expo/vector-icons";
+import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import { tailwind, color } from "react-native-tailwindcss";
 import { Easing } from "react-native-reanimated";
 import { StyleSheet } from "react-native";
@@ -18,7 +18,18 @@ import {
   useSendTextToSpeechMutation,
   useSendChatBotMessageMutation,
 } from "./apiSlice";
-import { ONBOARD_STEPS, selectApp, setAgentId, setApiKey, setOnboardingStep } from "./AppSlice";
+import {
+  ONBOARD_STEPS,
+  resetMessages,
+  selectApp,
+  setAgentId,
+  setApiKey,
+  setOnboardingStep,
+} from "./AppSlice";
+import { ChatScreen, generateUUID } from "./features/ChatScreen";
+import tw from "./lib/tailwind";
+import { useForgeForm } from "./hooks/useForgeForm";
+import { ForgeContainer } from "./components/Utils/ForgeContainer";
 
 const {
   flex,
@@ -90,10 +101,14 @@ export const HomeScreen = () => {
   const [audioUrl, setAudioUrl] = useState(false);
   const [sound, setSound] = useState(null);
   const appState = useSelector(selectApp);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const [onCreateBotVoice, voiceMutation] = useCreateBotVoiceMutation();
   const [onSendText, TextToSpeechMutate] = useSendTextToSpeechMutation();
-  const [] = useSendChatBotMessageMutation();
+  const [onVerifyChat, mutates] = useSendChatBotMessageMutation();
+
+  const agentId = useSelector(selectApp).agentId;
+  const apiKey = useSelector(selectApp).apiKey;
 
   async function startRecording() {
     try {
@@ -147,6 +162,7 @@ export const HomeScreen = () => {
     }
   }
 
+
   // async function playSound() {
   //   console.log("Loading Sound");
   //   const { sound } = await Audio.Sound.createAsync({ uri: audioUrl });
@@ -189,17 +205,43 @@ export const HomeScreen = () => {
     }
   };
 
+  const handleVerifyKeys = async () => {
+    const sessionId = generateUUID();
+    try {
+      const result = await onVerifyChat({
+        session_id: sessionId,
+        question: "Hi",
+        agentId,
+      }).unwrap();
+
+      if (!result?.status) {
+        alert(
+          "The keys are either incorrect or invalid, change the keys to another working key"
+        );
+        return;
+      }
+
+      dispatch(resetMessages());
+      dispatch(setOnboardingStep(ONBOARD_STEPS.VOICE_RECORDER));
+    } catch (error) {
+      console.log(error);
+      alert(error?.data?.message ?? "Unknown error ocurred, try again later");
+    }
+  };
+
   return (
     <View style={[{ flex: 1 }]}>
-      <View style={[flex1, itemsCenter, justifyCenter]}>
+      {/* <View style={[flex1, itemsCenter, justifyCenter]}>
         <Text style={[text2xl]}>InsightBot</Text>
-      </View>
+      </View> */}
 
-      <View style={[itemsCenter, justifyCenter, { flex: 5 }]}>
+      <ChatScreen />
+
+      {/* <View style={[itemsCenter, justifyCenter, { flex: 5 }]}>
         {isSpeaking ? <ChatbotAvatarAnimation /> : <ChatbotAvatar />}
-      </View>
+      </View> */}
 
-      <View style={[flex1, itemsCenter, justifyCenter]}>
+      {/* <View style={[flex1, itemsCenter, justifyCenter]}>
         <TouchableOpacity
           style={[
             h20,
@@ -213,14 +255,20 @@ export const HomeScreen = () => {
         >
           <FontAwesome name="microphone" size={24} color={color.white} />
         </TouchableOpacity>
-      </View>
+      </View> */}
 
       {/* Welcome */}
       <CustomModal
         isVisible={appState?.onboardingStep === ONBOARD_STEPS.WELCOME}
       >
         <View style={[p4]}>
-          <Text style={[text2xl]}>Welcome to InsightBot</Text>
+          <FontAwesome5
+            name="robot"
+            size={24}
+            color="gray"
+            style={tw`text-green-800`}
+          />
+          <Text style={[text2xl, tw`mt-2`]}>Welcome to InsightBot</Text>
           <Text style={[textBase, p1, textGray600]}>
             Your personalized AI conversation partner designed to transform the
             way you interact with information.
@@ -237,55 +285,38 @@ export const HomeScreen = () => {
         </View>
       </CustomModal>
 
-      {/* Voice recorder */}
-      <CustomModal
-        isVisible={appState?.onboardingStep === ONBOARD_STEPS.VOICE_RECORDER}
-      >
-        <View style={[p4]}>
-          <Text style={[text2xl]}>Inspire InsightBot</Text>
-          <Text style={[textBase, p1, textGray600]}>
-            Train InsightBot with your voice or any other voice of your choice.
-            Let's inspire.
-          </Text>
-
-          <View style={[h40, itemsCenter, justifyCenter, isRecording && h50]}>
-            {isRecording ? (
-              <UserRecordAnimation onDidAnimate={handleRecord} />
-            ) : (
-              <UserRecord />
-            )}
-          </View>
-
-          {!isRecording && (
-            <Button
-              onPress={audioUrl ? handleCreateVoice : startRecording}
-              buttonStyle={[mT5]}
-            >
-              {audioUrl ? "Proceed" : "Start Record"}
-            </Button>
-          )}
-        </View>
-      </CustomModal>
-
       {/* form */}
       <CustomModal
         isVisible={appState?.onboardingStep === ONBOARD_STEPS.APP_CREDENTIAL}
       >
         <View style={[p4]}>
-          <Text style={[text2xl]}>Welcome to InsightBot</Text>
+          <FontAwesome5
+            name="robot"
+            size={44}
+            color="gray"
+            style={tw`text-green-800`}
+          />
+          <Text style={[text2xl, tw`mt-2`]}>Welcome to InsightBot</Text>
           <Text style={[textBase, p1, textGray600]}>
-            Provide your Autogon AI apikey and agentId to use InsightBot.
+            Provide your Autogon AI apikey and agent Id to use InsightBot.
           </Text>
 
           <View style={[mT5]}>
-            <Input label="API Key" onChangeText={(text) => dispatch(setApiKey(text))} />
-            <Input label="Agent Id" onChangeText={(text) => dispatch(setAgentId(text))} />
+            <Input
+              label="API Key"
+              value={apiKey} 
+              onChangeText={(text) => dispatch(setApiKey(text))}
+            />
+            <Input
+              label="Agent Id"
+              value={agentId}
+              onChangeText={(text) => dispatch(setAgentId(text))}
+            />
           </View>
 
           <Button
-            onPress={() =>
-              dispatch(setOnboardingStep(ONBOARD_STEPS.VOICE_RECORDER))
-            }
+            loading={mutates.isLoading}
+            onPress={() => handleVerifyKeys()}
             buttonStyle={[mT5]}
           >
             Verify
@@ -417,13 +448,17 @@ const CustomModal = ({ children, isVisible }) => {
   );
 };
 
-const Button = ({ children, buttonStyle, onPress }) => {
+const Button = ({ children, buttonStyle, onPress, loading }) => {
   return (
     <TouchableOpacity
       onPress={onPress}
       style={[pX5, pY4, bgGreen800, wAuto, itemsCenter, ...buttonStyle]}
     >
-      <Text style={[textBase, textWhite]}>{children}</Text>
+      {loading ? (
+        <ActivityIndicator color="white" />
+      ) : (
+        <Text style={[textBase, textWhite]}>{children}</Text>
+      )}
     </TouchableOpacity>
   );
 };
@@ -433,7 +468,7 @@ const Input = ({ label, labelStyle = [], inputStyle = [], ...input }) => {
     <View style={[mT5]}>
       <Text style={[textSm, ...labelStyle]}>{label}</Text>
       <TextInput
-        style={[pY4, border, mT2, borderGray400, roundedTSm, ...inputStyle]}
+        style={[pY4, pX5, border, mT2, borderGray400, roundedTSm, ...inputStyle]}
         {...input}
       />
     </View>
